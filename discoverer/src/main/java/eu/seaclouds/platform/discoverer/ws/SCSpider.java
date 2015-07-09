@@ -21,6 +21,6 @@ import eu.seaclouds.platform.discoverer.core.Offering;
 
 public abstract class SCSpider {
 
-	public abstract Offering[] crowl();
+	public abstract CrawlingResult[] crawl();
 	
 }
