@@ -22,8 +22,12 @@ import eu.seaclouds.platform.discoverer.core.Discoverer;
 import eu.seaclouds.platform.discoverer.core.Offering;
 
 import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 /* utils */
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.*;
 
 @SuppressWarnings("serial")
@@ -35,7 +39,9 @@ public class CrawlerManager extends HttpServlet implements Runnable {
 	private Thread backThread;
 	private int tick;
 
-
+	private int crawledTimes;
+	private int totalOfferingsGet;
+	private Date lastCrawl;
 
 	private void updateRepository(Hashtable<String, CrawlingResult> collected) {
 		/* special case */
@@ -86,7 +92,7 @@ public class CrawlerManager extends HttpServlet implements Runnable {
 		
 		/* init. spiders */
 		Vector<SCSpider> spiders = new Vector<SCSpider>();
-		// spider.add(new PaaSifySpider());
+		spiders.add(new PaasifySpider());
 		Hashtable<String, CrawlingResult> collectedOfferings
 				= new Hashtable<String, CrawlingResult>();
 		
@@ -107,6 +113,10 @@ public class CrawlerManager extends HttpServlet implements Runnable {
 
 			/* update repo */
 			updateRepository(collectedOfferings);
+
+			crawledTimes++;
+			totalOfferingsGet += collectedOfferings.size();
+			lastCrawl = Calendar.getInstance().getTime();
 
 			/* wait for next tick */
 			Thread.sleep(tick);
@@ -130,11 +140,33 @@ public class CrawlerManager extends HttpServlet implements Runnable {
 	
 	public void init() {
 		this.tick = 1000*this.SLEEP_SECONDS;
+		crawledTimes = 0;
+		totalOfferingsGet = 0;
+		lastCrawl = null;
+
 		this.backThread = new Thread(this);
 		backThread.start();
 	}	
 	
-	
-	
-	
+	public void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
+		response.setContentType("text/html");
+
+		PrintWriter out = response.getWriter();
+
+		String lastUpdate = "never";
+
+		if (lastCrawl != null)
+			lastUpdate = lastCrawl.toString();
+
+		out.println("<html>" +
+				"<head><title>Crawler Manager Stats</title></head>" +
+				"<body>" +
+				"<h3>Crawled " + crawledTimes + " times</h3>" +
+				"<h3>Collected " + totalOfferingsGet + " offerings</h3>" +
+				"<h4>Last crawl: " + lastUpdate + "</h3>" +
+				"</body>" +
+				"</html>");
+
+		out.close();
+	}
 }
